@@ -186,3 +186,74 @@ test('mathop', t => {
     t.strictEqual(blocks.mathop({OPERATOR: 'undefined', NUM: 1}), 0);
     t.end();
 });
+
+test('removed operators not in primitives', t => {
+    const primitives = blocks.getPrimitives();
+    t.notOk(primitives.hasOwnProperty('operator_ltoreq'), 'operator_ltoreq should not exist');
+    t.notOk(primitives.hasOwnProperty('operator_gtoreq'), 'operator_gtoreq should not exist');
+    t.end();
+});
+
+test('removed operators - ltoreq method does not exist', t => {
+    t.notOk(typeof blocks.ltoreq === 'function', 'ltoreq method should not exist');
+    t.end();
+});
+
+test('removed operators - gtoreq method does not exist', t => {
+    t.notOk(typeof blocks.gtoreq === 'function', 'gtoreq method should not exist');
+    t.end();
+});
+
+test('lt edge cases', t => {
+    // Numeric comparisons
+    t.strictEqual(blocks.lt({OPERAND1: 0, OPERAND2: 1}), true);
+    t.strictEqual(blocks.lt({OPERAND1: -1, OPERAND2: 0}), true);
+    t.strictEqual(blocks.lt({OPERAND1: -10, OPERAND2: -5}), true);
+    
+    // String comparisons
+    t.strictEqual(blocks.lt({OPERAND1: 'abc', OPERAND2: 'def'}), true);
+    t.strictEqual(blocks.lt({OPERAND1: 'ABC', OPERAND2: 'abc'}), true);
+    
+    // Mixed type comparisons
+    t.strictEqual(blocks.lt({OPERAND1: '5', OPERAND2: '10'}), true);
+    t.strictEqual(blocks.lt({OPERAND1: 5, OPERAND2: '10'}), true);
+    
+    t.end();
+});
+
+test('gt edge cases', t => {
+    // Numeric comparisons
+    t.strictEqual(blocks.gt({OPERAND1: 1, OPERAND2: 0}), true);
+    t.strictEqual(blocks.gt({OPERAND1: 0, OPERAND2: -1}), true);
+    t.strictEqual(blocks.gt({OPERAND1: -5, OPERAND2: -10}), true);
+    
+    // String comparisons
+    t.strictEqual(blocks.gt({OPERAND1: 'def', OPERAND2: 'abc'}), true);
+    t.strictEqual(blocks.gt({OPERAND1: 'abc', OPERAND2: 'ABC'}), true);
+    
+    // Mixed type comparisons
+    t.strictEqual(blocks.gt({OPERAND1: '10', OPERAND2: '5'}), true);
+    t.strictEqual(blocks.gt({OPERAND1: 10, OPERAND2: '5'}), true);
+    
+    t.end();
+});
+
+test('equals edge cases', t => {
+    // Numeric equals
+    t.strictEqual(blocks.equals({OPERAND1: 0, OPERAND2: 0}), true);
+    t.strictEqual(blocks.equals({OPERAND1: -1, OPERAND2: -1}), true);
+    t.strictEqual(blocks.equals({OPERAND1: 1.5, OPERAND2: 1.5}), true);
+    
+    // String equals
+    t.strictEqual(blocks.equals({OPERAND1: '', OPERAND2: ''}), true);
+    t.strictEqual(blocks.equals({OPERAND1: 'test', OPERAND2: 'test'}), true);
+    
+    // Case sensitive
+    t.strictEqual(blocks.equals({OPERAND1: 'Test', OPERAND2: 'test'}), false);
+    
+    // Type coercion
+    t.strictEqual(blocks.equals({OPERAND1: '1', OPERAND2: 1}), true);
+    t.strictEqual(blocks.equals({OPERAND1: 1, OPERAND2: '1'}), true);
+    
+    t.end();
+});
