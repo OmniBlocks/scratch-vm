@@ -12,8 +12,11 @@ test('Architecture changes - Overall validation', t => {
     const blocks = new Operators(null);
     const primitives = blocks.getPrimitives();
     
-    t.notOk(primitives.operator_ltoreq, 'ltoreq operator removed');
-    t.notOk(primitives.operator_gtoreq, 'gtoreq operator removed');
+    // Verify new operators exist
+    t.ok(primitives.operator_ltoreq, 'ltoreq operator exists');
+    t.ok(primitives.operator_gtoreq, 'gtoreq operator exists');
+    
+    // Verify standard operators still exist
     t.ok(primitives.operator_lt, 'lt operator still exists');
     t.ok(primitives.operator_gt, 'gt operator still exists');
     t.ok(primitives.operator_equals, 'equals operator still exists');
@@ -41,10 +44,10 @@ test('Architecture changes - Overall validation', t => {
     t.ok(BlockType.BOOLEAN, 'BOOLEAN block type exists');
     t.ok(BlockType.HAT, 'HAT block type exists');
     
-    // Test 5: Compiler enums cleanup
+    // Test 5: Compiler enums include new operators
     const opcodeValues = Object.values(InputOpcode);
-    t.notOk(opcodeValues.includes('op.gtoreq'), 'OP_GTOREQ removed from compiler');
-    t.notOk(opcodeValues.includes('op.ltoreq'), 'OP_LTOREQ removed from compiler');
+    t.ok(opcodeValues.includes('op.gtoreq'), 'OP_GTOREQ in compiler');
+    t.ok(opcodeValues.includes('op.ltoreq'), 'OP_LTOREQ in compiler');
     t.ok(opcodeValues.includes('op.greater'), 'OP_GREATER still in compiler');
     t.ok(opcodeValues.includes('op.less'), 'OP_LESS still in compiler');
     
