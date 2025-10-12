@@ -187,20 +187,82 @@ test('mathop', t => {
     t.end();
 });
 
-test('removed operators not in primitives', t => {
+test('new operators in primitives', t => {
     const primitives = blocks.getPrimitives();
-    t.notOk(primitives.hasOwnProperty('operator_ltoreq'), 'operator_ltoreq should not exist');
-    t.notOk(primitives.hasOwnProperty('operator_gtoreq'), 'operator_gtoreq should not exist');
+    t.ok(primitives.hasOwnProperty('operator_ltoreq'), 'operator_ltoreq exists');
+    t.ok(primitives.hasOwnProperty('operator_gtoreq'), 'operator_gtoreq exists');
     t.end();
 });
 
-test('removed operators - ltoreq method does not exist', t => {
-    t.notOk(typeof blocks.ltoreq === 'function', 'ltoreq method should not exist');
+test('ltoreq - less than or equal', t => {
+    // Less than cases
+    t.strictEqual(blocks.ltoreq({OPERAND1: '1', OPERAND2: '2'}), true);
+    t.strictEqual(blocks.ltoreq({OPERAND1: 'a', OPERAND2: 'z'}), true);
+    t.strictEqual(blocks.ltoreq({OPERAND1: -5, OPERAND2: 0}), true);
+    
+    // Equal cases
+    t.strictEqual(blocks.ltoreq({OPERAND1: '1', OPERAND2: '1'}), true);
+    t.strictEqual(blocks.ltoreq({OPERAND1: 'test', OPERAND2: 'test'}), true);
+    t.strictEqual(blocks.ltoreq({OPERAND1: 0, OPERAND2: 0}), true);
+    
+    // Greater than cases
+    t.strictEqual(blocks.ltoreq({OPERAND1: '2', OPERAND2: '1'}), false);
+    t.strictEqual(blocks.ltoreq({OPERAND1: 'z', OPERAND2: 'a'}), false);
+    t.strictEqual(blocks.ltoreq({OPERAND1: 10, OPERAND2: 2}), false);
+    
     t.end();
 });
 
-test('removed operators - gtoreq method does not exist', t => {
-    t.notOk(typeof blocks.gtoreq === 'function', 'gtoreq method should not exist');
+test('gtoreq - greater than or equal', t => {
+    // Greater than cases
+    t.strictEqual(blocks.gtoreq({OPERAND1: '2', OPERAND2: '1'}), true);
+    t.strictEqual(blocks.gtoreq({OPERAND1: 'z', OPERAND2: 'a'}), true);
+    t.strictEqual(blocks.gtoreq({OPERAND1: 10, OPERAND2: 2}), true);
+    
+    // Equal cases
+    t.strictEqual(blocks.gtoreq({OPERAND1: '1', OPERAND2: '1'}), true);
+    t.strictEqual(blocks.gtoreq({OPERAND1: 'test', OPERAND2: 'test'}), true);
+    t.strictEqual(blocks.gtoreq({OPERAND1: 0, OPERAND2: 0}), true);
+    
+    // Less than cases
+    t.strictEqual(blocks.gtoreq({OPERAND1: '1', OPERAND2: '2'}), false);
+    t.strictEqual(blocks.gtoreq({OPERAND1: 'a', OPERAND2: 'z'}), false);
+    t.strictEqual(blocks.gtoreq({OPERAND1: -5, OPERAND2: 0}), false);
+    
+    t.end();
+});
+
+test('ltoreq edge cases', t => {
+    // Numeric comparisons
+    t.strictEqual(blocks.ltoreq({OPERAND1: 0, OPERAND2: 1}), true);
+    t.strictEqual(blocks.ltoreq({OPERAND1: -1, OPERAND2: 0}), true);
+    t.strictEqual(blocks.ltoreq({OPERAND1: -10, OPERAND2: -5}), true);
+    
+    // String comparisons
+    t.strictEqual(blocks.ltoreq({OPERAND1: 'abc', OPERAND2: 'def'}), true);
+    t.strictEqual(blocks.ltoreq({OPERAND1: 'ABC', OPERAND2: 'abc'}), true);
+    
+    // Mixed type comparisons
+    t.strictEqual(blocks.ltoreq({OPERAND1: '10', OPERAND2: '2'}), false);
+    t.strictEqual(blocks.ltoreq({OPERAND1: '', OPERAND2: '0'}), true);
+    
+    t.end();
+});
+
+test('gtoreq edge cases', t => {
+    // Numeric comparisons
+    t.strictEqual(blocks.gtoreq({OPERAND1: 1, OPERAND2: 0}), true);
+    t.strictEqual(blocks.gtoreq({OPERAND1: 0, OPERAND2: -1}), true);
+    t.strictEqual(blocks.gtoreq({OPERAND1: -5, OPERAND2: -10}), true);
+    
+    // String comparisons
+    t.strictEqual(blocks.gtoreq({OPERAND1: 'def', OPERAND2: 'abc'}), true);
+    t.strictEqual(blocks.gtoreq({OPERAND1: 'abc', OPERAND2: 'ABC'}), true);
+    
+    // Mixed type comparisons
+    t.strictEqual(blocks.gtoreq({OPERAND1: '2', OPERAND2: '10'}), true);
+    t.strictEqual(blocks.gtoreq({OPERAND1: '0', OPERAND2: ''}), true);
+    
     t.end();
 });
 
