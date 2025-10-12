@@ -3,21 +3,19 @@ const fs = require('fs');
 const path = require('path');
 const VirtualMachine = require('../../src/virtual-machine');
 
-// Test that removed comparison operators (ltoreq, gtoreq) are not compiled
-test('Compiler does not handle removed ltoreq/gtoreq operators', t => {
-    const vm = new VM();
+// Test that the new comparison operators (ltoreq, gtoreq) are properly compiled
+test('Compiler handles ltoreq/gtoreq operators correctly', t => {
+    const vm = new VirtualMachine();
     
-    // Try to load a project that would have used these operators
-    // Since they're removed, the compiler should not try to compile them
     const fixture = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'default.sb3'));
     
     vm.loadProject(fixture).then(() => {
-        // Verify that the compiler primitives don't include these operators
-        const operatorsPrimitives = vm.runtime.getOpcodeFunction('operator_ltoreq');
-        t.notOk(operatorsPrimitives, 'operator_ltoreq should not be available');
+        // Verify that the compiler primitives include these operators
+        const ltoreqPrimitive = vm.runtime.getOpcodeFunction('operator_ltoreq');
+        t.ok(ltoreqPrimitive, 'operator_ltoreq should be available');
         
-        const operatorsPrimitives2 = vm.runtime.getOpcodeFunction('operator_gtoreq');
-        t.notOk(operatorsPrimitives2, 'operator_gtoreq should not be available');
+        const gtoreqPrimitive = vm.runtime.getOpcodeFunction('operator_gtoreq');
+        t.ok(gtoreqPrimitive, 'operator_gtoreq should be available');
         
         t.end();
     }).catch(err => {
@@ -26,8 +24,8 @@ test('Compiler does not handle removed ltoreq/gtoreq operators', t => {
     });
 });
 
-test('Standard comparison operators still work', t => {
-    const vm = new VM();
+test('New comparison operators work correctly in runtime', t => {
+    const vm = new VirtualMachine();
     
     const fixture = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'default.sb3'));
     
@@ -42,11 +40,16 @@ test('Standard comparison operators still work', t => {
         const eqFunc = vm.runtime.getOpcodeFunction('operator_equals');
         t.ok(eqFunc, 'operator_equals is available');
         
+        // Verify new operators
+        const ltoreqFunc = vm.runtime.getOpcodeFunction('operator_ltoreq');
+        t.ok(ltoreqFunc, 'operator_ltoreq is available');
+        
+        const gtoreqFunc = vm.runtime.getOpcodeFunction('operator_gtoreq');
+        t.ok(gtoreqFunc, 'operator_gtoreq is available');
+        
         t.end();
     }).catch(err => {
         t.fail(`Failed to load project: ${err}`);
         t.end();
     });
 });
-
-const VM = VirtualMachine;
