@@ -5,7 +5,14 @@ This document describes the comprehensive test coverage added for the changes in
 ## Changed Files and Test Coverage
 
 ### 1. src/blocks/scratch3_operators.js
-**Changes:** Removed `operator_ltoreq` and `operator_gtoreq` operators
+**Changes:** Added `operator_ltoreq` (<=) and `operator_gtoreq` (>=) operators
+
+**Test Files:**
+- `test/unit/blocks_operators.js` - Enhanced with tests verifying:
+  - New operators exist in primitives
+  - ltoreq correctly handles less-than-or-equal comparisons
+  - gtoreq correctly handles greater-than-or-equal comparisons
+  - Edge cases for both operators (numeric, string, mixed types)
 
 **Test Files:**
 - `test/unit/blocks_operators.js` - Enhanced with tests verifying:
@@ -25,12 +32,13 @@ This document describes the comprehensive test coverage added for the changes in
   - String operators are intact
 
 ### 3. src/compiler/irgen.js & src/compiler/jsgen.js
-**Changes:** Removed code generation for ltoreq/gtoreq operators
+**Changes:** Added code generation for ltoreq/gtoreq operators
 
 **Test Files:**
-- `test/integration/tw_operator_comparison_removed.js` - Integration test verifying:
-  - Compiler doesn't handle removed operators
-  - Standard comparison operators still work in compiled code
+- `test/integration/tw_operator_comparison.js` - Integration test verifying:
+  - Compiler handles new operators correctly
+  - New comparison operators work in compiled code
+  - Standard operators still work alongside new ones
 
 ### 4. src/compiler/jsexecute.js
 **Changes:** Removed runtime functions for ltoreq/gtoreq
