@@ -78,3 +78,127 @@ test('loadExtensionURL, getExtensionURLs, deduplication', async t => {
 
     t.end();
 });
+
+test('removed methods do not exist', t => {
+    const fakeRuntime = {};
+    const manager = new ExtensionManager(fakeRuntime);
+    
+    t.notOk(manager.getCoreExtensionList, 'getCoreExtensionList should not exist');
+    t.notOk(manager.getBuiltInExtensionsList, 'getBuiltInExtensionsList should not exist');
+    t.notOk(manager.getAddonBlockSwitches, 'getAddonBlockSwitches should not exist');
+    t.notOk(manager.prepareSwap, 'prepareSwap should not exist');
+    t.notOk(manager.removeExtension, 'removeExtension should not exist');
+    t.notOk(manager.getExtensionIdFromOpcode, 'getExtensionIdFromOpcode should not exist');
+    t.notOk(manager.findUsedExtensions, 'findUsedExtensions should not exist');
+    t.notOk(manager.removeUnusedExtensions, 'removeUnusedExtensions should not exist');
+    t.notOk(manager.extensionUrlFromId, 'extensionUrlFromId should not exist');
+    t.notOk(manager.refreshDynamicCategorys, 'refreshDynamicCategorys should not exist');
+    
+    t.end();
+});
+
+test('existing methods are present', t => {
+    const fakeRuntime = {};
+    const manager = new ExtensionManager(fakeRuntime);
+    
+    t.type(manager.isExtensionLoaded, 'function', 'isExtensionLoaded exists');
+    t.type(manager.isBuiltinExtension, 'function', 'isBuiltinExtension exists');
+    t.type(manager.loadExtensionIdSync, 'function', 'loadExtensionIdSync exists');
+    t.type(manager.loadExtensionURL, 'function', 'loadExtensionURL exists');
+    t.type(manager.addBuiltinExtension, 'function', 'addBuiltinExtension exists');
+    t.type(manager.refreshBlocks, 'function', 'refreshBlocks exists');
+    t.type(manager.getExtensionURLs, 'function', 'getExtensionURLs exists');
+    t.type(manager.isExtensionURLLoaded, 'function', 'isExtensionURLLoaded exists');
+    t.type(manager._isValidExtensionURL, 'function', '_isValidExtensionURL exists');
+    
+    t.end();
+});
+
+test('getExtensionURLs excludes builtin extensions', t => {
+    const vm = new VM();
+    
+    // Load a builtin extension
+    vm.extensionManager.loadExtensionIdSync('pen');
+    
+    const urls = vm.extensionManager.getExtensionURLs();
+    
+    // Built-in extensions should not appear in the URLs map
+    t.notOk(urls.pen, 'Built-in extension pen should not be in URLs');
+    
+    t.end();
+});
+
+test('isExtensionLoaded works for builtin extensions', t => {
+    const vm = new VM();
+    
+    t.equal(vm.extensionManager.isExtensionLoaded('pen'), false, 'pen not loaded initially');
+    
+    vm.extensionManager.loadExtensionIdSync('pen');
+    
+    t.equal(vm.extensionManager.isExtensionLoaded('pen'), true, 'pen loaded after loadExtensionIdSync');
+    
+    t.end();
+});
+
+test('addBuiltinExtension allows registering new builtin extensions', t => {
+    const vm = new VM();
+    
+    const fakeExtension = class {
+        constructor() {}
+        getInfo() {
+            return {
+                id: 'fakeext',
+                name: 'Fake Extension',
+                blocks: []
+            };
+        }
+    };
+    
+    vm.extensionManager.addBuiltinExtension('fakeext', fakeExtension);
+    
+    t.equal(vm.extensionManager.isBuiltinExtension('fakeext'), true, 'Fake extension is registered as builtin');
+    
+    vm.extensionManager.loadExtensionIdSync('fakeext');
+    
+    t.equal(vm.extensionManager.isExtensionLoaded('fakeext'), true, 'Fake extension can be loaded');
+    
+    t.end();
+});
+
+test('refreshBlocks without extension id refreshes all', async t => {
+    const vm = new VM();
+    
+    vm.extensionManager.loadExtensionIdSync('pen');
+    vm.extensionManager.loadExtensionIdSync('music');
+    
+    // Should not throw
+    await vm.extensionManager.refreshBlocks();
+    
+    t.pass('refreshBlocks completed without error');
+    t.end();
+});
+
+test('refreshBlocks with specific extension id', async t => {
+    const vm = new VM();
+    
+    vm.extensionManager.loadExtensionIdSync('pen');
+    
+    // Should not throw
+    await vm.extensionManager.refreshBlocks('pen');
+    
+    t.pass('refreshBlocks for specific extension completed without error');
+    t.end();
+});
+
+test('refreshBlocks with unknown extension id fails', async t => {
+    const vm = new VM();
+    
+    try {
+        await vm.extensionManager.refreshBlocks('unknownext');
+        t.fail('Should have rejected');
+    } catch (e) {
+        t.ok(e.message.includes('Unknown extension'), 'Rejected with appropriate error');
+    }
+    
+    t.end();
+});

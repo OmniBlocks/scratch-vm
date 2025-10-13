@@ -186,3 +186,130 @@ test('mathop', t => {
     t.strictEqual(blocks.mathop({OPERATOR: 'undefined', NUM: 1}), 0);
     t.end();
 });
+
+// Tests for removed operator functions (ltoreq and gtoreq)
+test('ltoreq should not exist', t => {
+    t.notOk(blocks.ltoreq, 'ltoreq method should not exist');
+    t.notOk(blocks.getPrimitives().operator_ltoreq, 'operator_ltoreq should not be in primitives');
+    t.end();
+});
+
+test('gtoreq should not exist', t => {
+    t.notOk(blocks.gtoreq, 'gtoreq method should not exist');
+    t.notOk(blocks.getPrimitives().operator_gtoreq, 'operator_gtoreq should not be in primitives');
+    t.end();
+});
+
+// Comprehensive tests for comparison operators to ensure they work correctly
+test('lt - comprehensive edge cases', t => {
+    // Numbers
+    t.strictEqual(blocks.lt({OPERAND1: 0, OPERAND2: 1}), true);
+    t.strictEqual(blocks.lt({OPERAND1: -1, OPERAND2: 0}), true);
+    t.strictEqual(blocks.lt({OPERAND1: -10, OPERAND2: -5}), true);
+    t.strictEqual(blocks.lt({OPERAND1: 0.5, OPERAND2: 1.5}), true);
+    
+    // String numbers
+    t.strictEqual(blocks.lt({OPERAND1: '5', OPERAND2: '10'}), true);
+    t.strictEqual(blocks.lt({OPERAND1: '10', OPERAND2: '5'}), false);
+    
+    // Mixed types
+    t.strictEqual(blocks.lt({OPERAND1: 5, OPERAND2: '10'}), true);
+    t.strictEqual(blocks.lt({OPERAND1: '5', OPERAND2: 10}), true);
+    
+    // Strings
+    t.strictEqual(blocks.lt({OPERAND1: 'abc', OPERAND2: 'def'}), true);
+    t.strictEqual(blocks.lt({OPERAND1: 'xyz', OPERAND2: 'abc'}), false);
+    
+    // Special values
+    t.strictEqual(blocks.lt({OPERAND1: NaN, OPERAND2: 5}), false);
+    t.strictEqual(blocks.lt({OPERAND1: 5, OPERAND2: NaN}), false);
+    t.strictEqual(blocks.lt({OPERAND1: Infinity, OPERAND2: 100}), false);
+    t.strictEqual(blocks.lt({OPERAND1: -Infinity, OPERAND2: 0}), true);
+    
+    t.end();
+});
+
+test('equals - comprehensive edge cases', t => {
+    // Numbers
+    t.strictEqual(blocks.equals({OPERAND1: 1, OPERAND2: 1}), true);
+    t.strictEqual(blocks.equals({OPERAND1: 0, OPERAND2: 0}), true);
+    t.strictEqual(blocks.equals({OPERAND1: -5, OPERAND2: -5}), true);
+    
+    // String numbers
+    t.strictEqual(blocks.equals({OPERAND1: '5', OPERAND2: '5'}), true);
+    t.strictEqual(blocks.equals({OPERAND1: '0', OPERAND2: '0'}), true);
+    
+    // Mixed types - string number and number
+    t.strictEqual(blocks.equals({OPERAND1: 5, OPERAND2: '5'}), true);
+    t.strictEqual(blocks.equals({OPERAND1: '5', OPERAND2: 5}), true);
+    
+    // Strings
+    t.strictEqual(blocks.equals({OPERAND1: 'hello', OPERAND2: 'hello'}), true);
+    t.strictEqual(blocks.equals({OPERAND1: 'hello', OPERAND2: 'world'}), false);
+    
+    // Case sensitivity
+    t.strictEqual(blocks.equals({OPERAND1: 'Hello', OPERAND2: 'hello'}), false);
+    
+    // Empty strings
+    t.strictEqual(blocks.equals({OPERAND1: '', OPERAND2: ''}), true);
+    
+    // Special values
+    t.strictEqual(blocks.equals({OPERAND1: NaN, OPERAND2: NaN}), false);
+    
+    t.end();
+});
+
+test('gt - comprehensive edge cases', t => {
+    // Numbers
+    t.strictEqual(blocks.gt({OPERAND1: 10, OPERAND2: 5}), true);
+    t.strictEqual(blocks.gt({OPERAND1: 0, OPERAND2: -1}), true);
+    t.strictEqual(blocks.gt({OPERAND1: -5, OPERAND2: -10}), true);
+    
+    // String numbers
+    t.strictEqual(blocks.gt({OPERAND1: '20', OPERAND2: '10'}), true);
+    t.strictEqual(blocks.gt({OPERAND1: '5', OPERAND2: '10'}), false);
+    
+    // Mixed types
+    t.strictEqual(blocks.gt({OPERAND1: 10, OPERAND2: '5'}), true);
+    t.strictEqual(blocks.gt({OPERAND1: '10', OPERAND2: 5}), true);
+    
+    // Strings
+    t.strictEqual(blocks.gt({OPERAND1: 'xyz', OPERAND2: 'abc'}), true);
+    t.strictEqual(blocks.gt({OPERAND1: 'abc', OPERAND2: 'xyz'}), false);
+    
+    // Special values
+    t.strictEqual(blocks.gt({OPERAND1: Infinity, OPERAND2: 100}), true);
+    t.strictEqual(blocks.gt({OPERAND1: 0, OPERAND2: -Infinity}), true);
+    
+    t.end();
+});
+
+test('getPrimitives - verify correct primitives exist', t => {
+    const primitives = blocks.getPrimitives();
+    
+    // Verify expected primitives exist
+    t.ok(primitives.operator_add, 'operator_add exists');
+    t.ok(primitives.operator_subtract, 'operator_subtract exists');
+    t.ok(primitives.operator_multiply, 'operator_multiply exists');
+    t.ok(primitives.operator_divide, 'operator_divide exists');
+    t.ok(primitives.operator_lt, 'operator_lt exists');
+    t.ok(primitives.operator_equals, 'operator_equals exists');
+    t.ok(primitives.operator_gt, 'operator_gt exists');
+    t.ok(primitives.operator_and, 'operator_and exists');
+    t.ok(primitives.operator_or, 'operator_or exists');
+    t.ok(primitives.operator_not, 'operator_not exists');
+    t.ok(primitives.operator_random, 'operator_random exists');
+    t.ok(primitives.operator_join, 'operator_join exists');
+    t.ok(primitives.operator_letter_of, 'operator_letter_of exists');
+    t.ok(primitives.operator_length, 'operator_length exists');
+    t.ok(primitives.operator_contains, 'operator_contains exists');
+    t.ok(primitives.operator_mod, 'operator_mod exists');
+    t.ok(primitives.operator_round, 'operator_round exists');
+    t.ok(primitives.operator_mathop, 'operator_mathop exists');
+    
+    // Verify removed primitives don't exist
+    t.notOk(primitives.operator_ltoreq, 'operator_ltoreq does not exist');
+    t.notOk(primitives.operator_gtoreq, 'operator_gtoreq does not exist');
+    
+    t.end();
+});
