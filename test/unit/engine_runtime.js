@@ -25,6 +25,32 @@ test('spec', t => {
     t.end();
 });
 
+test('extensionRuntimeOptions initialization', t => {
+    const r = new Runtime();
+
+    // Test that extensionRuntimeOptions is initialized
+    t.type(r.extensionRuntimeOptions, 'object');
+    t.ok(r.extensionRuntimeOptions !== null);
+    t.ok(r.extensionRuntimeOptions !== undefined);
+
+    // Test that accessing javascriptUnsandboxed doesn't throw
+    t.doesNotThrow(() => {
+        const unsandboxed = r.extensionRuntimeOptions.javascriptUnsandboxed;
+        return unsandboxed;
+    });
+
+    // Test the specific condition from the JavaScript extension
+    t.doesNotThrow(() => {
+        const condition = r.extensionRuntimeOptions.javascriptUnsandboxed === true;
+        return condition;
+    });
+
+    // Test that the condition evaluates to false when javascriptUnsandboxed is undefined
+    t.equal(r.extensionRuntimeOptions.javascriptUnsandboxed === true, false);
+
+    t.end();
+});
+
 test('monitorStateEquals', t => {
     const r = new Runtime();
     const id = 'xklj4#!';
