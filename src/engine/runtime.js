@@ -1053,7 +1053,754 @@ class Runtime extends EventEmitter {
      */
     makeMessageContextForTarget (target) {
         const context = {};
-      d.
+     n                        target.isStage ? TargetType.STAGE : TargetType.SPRITE
+                    );
+                }
+                // If the block info's `hideFromPalette` is true, then filter out this block
+                return blockFilterIncludesTarget && !block.info.hideFromPalette;
+            });
+
+            const colorXML = `colour="${xmlEscape(color1)}" secondaryColour="${xmlEscape(color2)}"`;
+
+            // Use a menu icon if there is one. Otherwise, use the block icon. If there's no icon,
+            // the category menu will show its default colored circle.
+            let menuIconURI = '';
+            if (categoryInfo.menuIconURI) {
+                menuIconURI = categoryInfo.menuIconURI;
+            } else if (categoryInfo.blockIconURI) {
+                menuIconURI = categoryInfo.blockIconURI;
+            }
+            const menuIconXML = menuIconURI ?
+                `iconURI="${xmlEscape(menuIconURI)}"` : '';
+
+            let statusButtonXML = '';
+            if (categoryInfo.showStatusButton) {
+                statusButtonXML = 'showStatusButton="true"';
+            }
+
+            let xml = `<category name="${xmlEscape(name)}"`;
+            xml += ` id="${xmlEscape(categoryInfo.id)}"`;
+            xml += ` ${statusButtonXML}`;
+            xml += ` ${colorXML}`;
+            xml += ` ${menuIconXML}>`;
+            xml += paletteBlocks.map(block => block.xml).join('');
+            xml += '</category>';
+
+            return {
+                id: categoryInfo.id,
+                xml
+            };
+        });
+    }
+
+    /**
+     * @returns {Array.<string>} - an array containing the scratch-blocks JSON information for each dynamic block.
+     */
+    getBlocksJSON () {
+        return this._blockInfo.reduce(
+            (result, categoryInfo) => result.concat(categoryInfo.blocks.map(blockInfo => blockInfo.json)), []);
+    }
+
+    /**
+     * One-time initialization for Scratch Link support.
+     */
+    _initScratchLink () {
+        // Check that we're actually in a real browser, not Node.js or JSDOM, and we have a valid-looking origin.
+        // note that `if (self?....)` will throw if `self` is undefined, so check for that first!
+        if (typeof self !== 'undefined' &&
+            typeof document !== 'undefined' &&
+            document.getElementById &&
+            self.origin &&
+            self.origin !== 'null' && // note this is a string comparison, not a null check
+            self.navigator &&
+            self.navigator.userAgent &&
+            !(
+                self.navigator.userAgent.includes('Node.js') ||
+                self.navigator.userAgent.includes('jsdom')
+            )
+        ) {
+            // Create a script tag for the Scratch Link browser extension, unless one already exists
+            const scriptElement = document.getElementById('scratch-link-extension-script');
+            if (!scriptElement) {
+                const script = document.createElement('script');
+                script.id = 'scratch-link-extension-script';
+                document.body.appendChild(script);
+
+                // Tell the browser extension to inject its script.
+                // If the extension isn't present or isn't active, this will do nothing.
+                self.postMessage('inject-scratch-link-script', self.origin);
+            }
+        }
+    }
+
+    /**
+     * Get a scratch link socket.
+     * @param {string} type Either BLE or BT
+     * @returns {ScratchLinkSocket} The scratch link socket.
+     */
+    getScratchLinkSocket (type) {
+        const factory = this._linkSocketFactory || this._defaultScratchLinkSocketFactory;
+        return factory(type);
+    }
+
+    /**
+     * Configure how ScratchLink sockets are created. Factory must consume a "type" parameter
+     * either BT or BLE.
+     * @param {Function} factory The new factory for creating ScratchLink sockets.
+     */
+    configureScratchLinkSocketFactory (factory) {
+        this._linkSocketFactory = factory;
+    }
+
+    /**
+     * The default scratch link socket creator, using websockets to the installed device manager.
+     * @param {string} type Either BLE or BT
+     * @returns {ScratchLinkSocket} The new scratch link socket (a WebSocket object)
+     */
+    _defaultScratchLinkSocketFactory (type) {
+        const Scratch = self.Scratch;
+        const ScratchLinkSafariSocket = Scratch && Scratch.ScratchLinkSafariSocket;
+        // detect this every time in case the user turns on the extension after loading the page
+        const useSafariSocket = ScratchLinkSafariSocket && ScratchLinkSafariSocket.isSafariHelperCompatible();
+        return useSafariSocket ? new ScratchLinkSafariSocket(type) : new ScratchLinkWebSocket(type);
+    }
+
+    /**
+     * Register an extension that communications with a hardware peripheral by id,
+     * to have access to it and its peripheral functions in the future.
+     * @param {string} extensionId - the id of the extension.
+     * @param {object} extension - the extension to register.
+     */
+    registerPeripheralExtension (extensionId, extension) {
+        this.peripheralExtensions[extensionId] = extension;
+    }
+
+    /**
+     * Tell the specified extension to scan for a peripheral.
+     * @param {string} extensionId - the id of the extension.
+     */
+    scanForPeripheral (extensionId) {
+        if (this.peripheralExtensions[extensionId]) {
+            this.peripheralExtensions[extensionId].scan();
+        }
+    }
+
+    /**
+     * Connect to the extension's specified peripheral.
+     * @param {string} extensionId - the id of the extension.
+     * @param {number} peripheralId - the id of the peripheral.
+     */
+    connectPeripheral (extensionId, peripheralId) {
+        if (this.peripheralExtensions[extensionId]) {
+            this.peripheralExtensions[extensionId].connect(peripheralId);
+        }
+    }
+
+    /**
+     * Disconnect from the extension's connected peripheral.
+     * @param {string} extensionId - the id of the extension.
+     */
+    disconnectPeripheral (extensionId) {
+        if (this.peripheralExtensions[extensionId]) {
+            this.peripheralExtensions[extensionId].disconnect();
+        }
+    }
+
+    /**
+     * Returns whether the extension has a currently connected peripheral.
+     * @param {string} extensionId - the id of the extension.
+     * @return {boolean} - whether the extension has a connected peripheral.
+     */
+    getPeripheralIsConnected (extensionId) {
+        let isConnected = false;
+        if (this.peripheralExtensions[extensionId]) {
+            isConnected = this.peripheralExtensions[extensionId].isConnected();
+        }
+        return isConnected;
+    }
+
+    /**
+     * Emit an event to indicate that the microphone is being used to stream audio.
+     * @param {boolean} listening - true if the microphone is currently listening.
+     */
+    emitMicListening (listening) {
+        this.emit(Runtime.MIC_LISTENING, listening);
+    }
+
+    /**
+     * Retrieve the function associated with the given opcode.
+     * @param {!string} opcode The opcode to look up.
+     * @return {Function} The function which implements the opcode.
+     */
+    getOpcodeFunction (opcode) {
+        return this._primitives[opcode];
+    }
+
+    /**
+     * Return whether an opcode represents a hat block.
+     * @param {!string} opcode The opcode to look up.
+     * @return {boolean} True if the op is known to be a hat.
+     */
+    getIsHat (opcode) {
+        return Object.prototype.hasOwnProperty.call(this._hats, opcode);
+    }
+
+    /**
+     * Return whether an opcode represents an edge-activated hat block.
+     * @param {!string} opcode The opcode to look up.
+     * @return {boolean} True if the op is known to be a edge-activated hat.
+     */
+    getIsEdgeActivatedHat (opcode) {
+        return Object.prototype.hasOwnProperty.call(this._hats, opcode) &&
+            this._hats[opcode].edgeActivated;
+    }
+
+
+    /**
+     * Attach the audio engine
+     * @param {!AudioEngine} audioEngine The audio engine to attach
+     */
+    attachAudioEngine (audioEngine) {
+        this.audioEngine = audioEngine;
+    }
+
+    /**
+     * Attach the renderer
+     * @param {!RenderWebGL} renderer The renderer to attach
+     */
+    attachRenderer (renderer) {
+        this.renderer = renderer;
+        this.renderer.setLayerGroupOrdering(StageLayering.LAYER_GROUPS);
+        this.renderer.offscreenTouching = !this.runtimeOptions.fencing;
+        this.updatePrivacy();
+    }
+
+    /**
+     * Set the bitmap adapter for the VM/runtime, which converts scratch 2
+     * bitmaps to scratch 3 bitmaps. (Scratch 3 bitmaps are all bitmap resolution 2)
+     * @param {!function} bitmapAdapter The adapter to attach
+     */
+    attachV2BitmapAdapter (bitmapAdapter) {
+        this.v2BitmapAdapter = bitmapAdapter;
+    }
+
+    /**
+     * Attach the storage module
+     * @param {!ScratchStorage} storage The storage module to attach
+     */
+    attachStorage (storage) {
+        this.storage = storage;
+
+        if (this.isPackaged) {
+            // In packaged runtime mode, generating real asset IDs is a waste of time.
+            // We do still want to preserve every asset having a unique ID.
+            const originalCreateAsset = storage.createAsset;
+            let assetIdCounter = 0;
+            // eslint-disable-next-line no-unused-vars
+            storage.createAsset = function packagedCreateAsset (assetType, dataFormat, data, assetId, generateId) {
+                if (!assetId) {
+                    assetId = (++assetIdCounter).toString();
+                }
+                return originalCreateAsset.call(
+                    this,
+                    assetType,
+                    dataFormat,
+                    data,
+                    assetId,
+                    // Never generate real asset ID
+                    false
+                );
+            };
+        }
+
+        fetchWithTimeout.setFetch(storage.scratchFetch.scratchFetch);
+        this.resetRunId();
+    }
+
+    // -----------------------------------------------------------------------------
+    // -----------------------------------------------------------------------------
+
+    /**
+     * Create a thread and push it to the list of threads.
+     * @param {!string} id ID of block that starts the stack.
+     * @param {!Target} target Target to run thread on.
+     * @param {?object} opts optional arguments
+     * @param {?boolean} opts.stackClick true if the script was activated by clicking on the stack
+     * @param {?boolean} opts.updateMonitor true if the script should update a monitor value
+     * @return {!Thread} The newly created thread.
+     */
+    _pushThread (id, target, opts) {
+        const thread = new Thread(id);
+        thread.target = target;
+        thread.stackClick = Boolean(opts && opts.stackClick);
+        thread.updateMonitor = Boolean(opts && opts.updateMonitor);
+        thread.blockContainer = thread.updateMonitor ?
+            this.monitorBlocks :
+            target.blocks;
+
+        thread.pushStack(id);
+        this.threads.push(thread);
+        if (!thread.stackClick && !thread.updateMonitor) {
+            this.threadMap.set(thread.getId(), thread);
+        }
+
+        // tw: compile new threads. Do not attempt to compile monitor threads.
+        if (!(opts && opts.updateMonitor) && this.compilerOptions.enabled) {
+            thread.tryCompile();
+        }
+
+        return thread;
+    }
+
+    /**
+     * Stop a thread: stop running it immediately, and remove it from the thread list later.
+     * @param {!Thread} thread Thread object to remove from actives
+     */
+    _stopThread (thread) {
+        // Mark the thread for later removal
+        thread.isKilled = true;
+        // Inform sequencer to stop executing that thread.
+        this.sequencer.retireThread(thread);
+    }
+
+    /**
+     * Restart a thread in place, maintaining its position in the list of threads.
+     * This is used by `startHats` to and is necessary to ensure 2.0-like execution order.
+     * Test project: https://scratch.mit.edu/projects/130183108/
+     * @param {!Thread} thread Thread object to restart.
+     * @return {Thread} The restarted thread.
+     */
+    _restartThread (thread) {
+        const newThread = new Thread(thread.topBlock);
+        newThread.target = thread.target;
+        newThread.stackClick = thread.stackClick;
+        newThread.updateMonitor = thread.updateMonitor;
+        newThread.blockContainer = thread.blockContainer;
+        newThread.pushStack(thread.topBlock);
+        // tw: when a thread is restarted, we have to check whether the previous script was attempted to be compiled.
+        if (thread.triedToCompile && this.compilerOptions.enabled) {
+            newThread.tryCompile();
+        }
+        if (!newThread.stackClick && !newThread.updateMonitor) {
+            this.threadMap.set(newThread.getId(), newThread);
+        }
+        const i = this.threads.indexOf(thread);
+        if (i > -1) {
+            this.threads[i] = newThread;
+            return newThread;
+        }
+        this.threads.push(thread);
+        return thread;
+    }
+
+    emitCompileError (target, error) {
+        this.emit(Runtime.COMPILE_ERROR, target, error);
+    }
+
+    /**
+     * Return whether a thread is currently active/running.
+     * @param {?Thread} thread Thread object to check.
+     * @return {boolean} True if the thread is active/running.
+     */
+    isActiveThread (thread) {
+        return (
+            (
+                thread.stack.length > 0 &&
+                thread.status !== Thread.STATUS_DONE) &&
+            this.threads.indexOf(thread) > -1);
+    }
+
+    /**
+     * Return whether a thread is waiting for more information or done.
+     * @param {?Thread} thread Thread object to check.
+     * @return {boolean} True if the thread is waiting
+     */
+    isWaitingThread (thread) {
+        return (
+            thread.status === Thread.STATUS_PROMISE_WAIT ||
+            thread.status === Thread.STATUS_YIELD_TICK ||
+            !this.isActiveThread(thread)
+        );
+    }
+
+    /**
+     * Toggle a script.
+     * @param {!string} topBlockId ID of block that starts the script.
+     * @param {?object} opts optional arguments to toggle script
+     * @param {?string} opts.target target ID for target to run script on. If not supplied, uses editing target.
+     * @param {?boolean} opts.stackClick true if the user activated the stack by clicking, false if not. This
+     *     determines whether we show a visual report when turning on the script.
+     */
+    toggleScript (topBlockId, opts) {
+        opts = Object.assign({
+            target: this._editingTarget,
+            stackClick: false
+        }, opts);
+        // Remove any existing thread.
+        for (let i = 0; i < this.threads.length; i++) {
+            // Toggling a script that's already running turns it off
+            if (this.threads[i].topBlock === topBlockId && this.threads[i].status !== Thread.STATUS_DONE) {
+                const blockContainer = opts.target.blocks;
+                const opcode = blockContainer.getOpcode(blockContainer.getBlock(topBlockId));
+
+                if (this.getIsEdgeActivatedHat(opcode) && this.threads[i].stackClick !== opts.stackClick) {
+                    // Allow edge activated hat thread stack click to coexist with
+                    // edge activated hat thread that runs every frame
+                    continue;
+                }
+                this._stopThread(this.threads[i]);
+                return;
+            }
+        }
+        // Otherwise add it.
+        this._pushThread(topBlockId, opts.target, opts);
+    }
+
+    /**
+     * Enqueue a script that when finished will update the monitor for the block.
+     * @param {!string} topBlockId ID of block that starts the script.
+     * @param {?Target} optTarget target Target to run script on. If not supplied, uses editing target.
+     */
+    addMonitorScript (topBlockId, optTarget) {
+        if (!optTarget) optTarget = this._editingTarget;
+        for (let i = 0; i < this.threads.length; i++) {
+            // Don't re-add the script if it's already running
+            if (this.threads[i].topBlock === topBlockId && this.threads[i].status !== Thread.STATUS_DONE &&
+                    this.threads[i].updateMonitor) {
+                return;
+            }
+        }
+        // Otherwise add it.
+        this._pushThread(topBlockId, optTarget, {updateMonitor: true});
+    }
+
+    /**
+     * Run a function `f` for all scripts in a workspace.
+     * `f` will be called with two parameters:
+     *  - the top block ID of the script.
+     *  - the target that owns the script.
+     * @param {!Function} f Function to call for each script.
+     * @param {Target=} optTarget Optionally, a target to restrict to.
+     */
+    allScriptsDo (f, optTarget) {
+        let targets = this.executableTargets;
+        if (optTarget) {
+            targets = [optTarget];
+        }
+        for (let t = targets.length - 1; t >= 0; t--) {
+            const target = targets[t];
+            const scripts = target.blocks.getScripts();
+            for (let j = 0; j < scripts.length; j++) {
+                const topBlockId = scripts[j];
+                f(topBlockId, target);
+            }
+        }
+    }
+
+    allScriptsByOpcodeDo (opcode, f, optTarget) {
+        let targets = this.executableTargets;
+        if (optTarget) {
+            targets = [optTarget];
+        }
+        for (let t = targets.length - 1; t >= 0; t--) {
+            const target = targets[t];
+            const scripts = BlocksRuntimeCache.getScripts(target.blocks, opcode);
+            for (let j = 0; j < scripts.length; j++) {
+                f(scripts[j], target);
+            }
+        }
+    }
+
+    /**
+     * Start all relevant hats.
+     * @param {!string} requestedHatOpcode Opcode of hats to start.
+     * @param {object=} optMatchFields Optionally, fields to match on the hat.
+     * @param {Target=} optTarget Optionally, a target to restrict to.
+     * @return {Array.<Thread>} List of threads started by this function.
+     */
+    startHats (requestedHatOpcode,
+        optMatchFields, optTarget) {
+        if (!Object.prototype.hasOwnProperty.call(this._hats, requestedHatOpcode)) {
+            // No known hat with this opcode.
+            return;
+        }
+        const instance = this;
+        const newThreads = [];
+        // Look up metadata for the relevant hat.
+        const hatMeta = instance._hats[requestedHatOpcode];
+
+        for (const opts in optMatchFields) {
+            if (!Object.prototype.hasOwnProperty.call(optMatchFields, opts)) continue;
+            optMatchFields[opts] = optMatchFields[opts].toUpperCase();
+        }
+
+        // tw: By assuming that all new threads will not interfere with eachother, we can optimize the loops
+        // inside the allScriptsByOpcodeDo callback below.
+        const startingThreadListLength = this.threads.length;
+
+        // Consider all scripts, looking for hats with opcode `requestedHatOpcode`.
+        this.allScriptsByOpcodeDo(requestedHatOpcode, (script, target) => {
+            const {
+                blockId: topBlockId,
+                fieldsOfInputs: hatFields
+            } = script;
+
+            // Match any requested fields.
+            // For example: ensures that broadcasts match.
+            // This needs to happen before the block is evaluated
+            // (i.e., before the predicate can be run) because "broadcast and wait"
+            // needs to have a precise collection of started threads.
+            for (const matchField in optMatchFields) {
+                if (hatFields[matchField].value !== optMatchFields[matchField]) {
+                    // Field mismatch.
+                    return;
+                }
+            }
+
+            if (hatMeta.restartExistingThreads) {
+                // If `restartExistingThreads` is true, we should stop
+                // any existing threads starting with the top block.
+                const existingThread = this.threadMap.get(Thread.getIdFromTargetAndBlock(target, topBlockId));
+                if (existingThread) {
+                    newThreads.push(this._restartThread(existingThread));
+                    return;
+                }
+            } else {
+                // If `restartExistingThreads` is false, we should
+                // give up if any threads with the top block are running.
+                for (let j = 0; j < startingThreadListLength; j++) {
+                    if (this.threads[j].target === target &&
+                        this.threads[j].topBlock === topBlockId &&
+                        // stack click threads and hat threads can coexist
+                        !this.threads[j].stackClick &&
+                        this.threads[j].status !== Thread.STATUS_DONE) {
+                        // Some thread is already running.
+                        return;
+                    }
+                }
+            }
+            // Start the thread with this top block.
+            newThreads.push(this._pushThread(topBlockId, target));
+        }, optTarget);
+        // For compatibility with Scratch 2, edge triggered hats need to be processed before
+        // threads are stepped. See ScratchRuntime.as for original implementation
+        newThreads.forEach(thread => {
+            if (thread.isCompiled) {
+                if (thread.executableHat) {
+                    // It is quite likely that we are currently executing a block, so make sure
+                    // that we leave the compiler's state intact at the end.
+                    compilerExecute.saveGlobalState();
+                    compilerExecute(thread);
+                    compilerExecute.restoreGlobalState();
+                }
+            } else {
+                execute(this.sequencer, thread);
+                thread.goToNextBlock();
+            }
+        });
+        return newThreads;
+    }
+
+
+    /**
+     * Dispose all targets. Return to clean state.
+     */
+    dispose () {
+        this.stopAll();
+        // Deleting each target's variable's monitors.
+        this.targets.forEach(target => {
+            if (target.isOriginal) target.deleteMonitors();
+        });
+
+        this.targets.map(this.disposeTarget, this);
+        this.extensionStorage = {};
+        // tw: explicitly emit a MONITORS_UPDATE instead of relying on implicit behavior of _step()
+        const emptyMonitorState = OrderedMap({});
+        if (!emptyMonitorState.equals(this._monitorState)) {
+            this._monitorState = emptyMonitorState;
+            this.emit(Runtime.MONITORS_UPDATE, this._monitorState);
+        }
+        this.emit(Runtime.RUNTIME_DISPOSED);
+        this.ioDevices.clock.resetProjectTimer();
+        this.fontManager.clear();
+        // @todo clear out extensions? turboMode? etc.
+
+        // *********** Cloud *******************
+
+        // If the runtime currently has cloud data,
+        // emit a has cloud data update event resetting
+        // it to false
+        if (this.hasCloudData()) {
+            this.emit(Runtime.HAS_CLOUD_DATA_UPDATE, false);
+        }
+
+        this.ioDevices.cloud.clear();
+
+        // Reset runtime cloud data info
+        const newCloudDataManager = cloudDataManager(this.cloudOptions);
+        this.hasCloudData = newCloudDataManager.hasCloudVariables;
+        this.canAddCloudVariable = newCloudDataManager.canAddCloudVariable;
+        this.getNumberOfCloudVariables = newCloudDataManager.getNumberOfCloudVariables;
+        this.addCloudVariable = this._initializeAddCloudVariable(newCloudDataManager);
+        this.removeCloudVariable = this._initializeRemoveCloudVariable(newCloudDataManager);
+
+        this.resetProgress();
+    }
+
+    /**
+     * Add a target to the runtime. This tracks the sprite pane
+     * ordering of the target. The target still needs to be put
+     * into the correct execution order after calling this function.
+     * @param {Target} target target to add
+     */
+    addTarget (target) {
+        this.targets.push(target);
+        this.executableTargets.push(target);
+        if (target.isStage && !this._stageTarget) {
+            this._stageTarget = target;
+        }
+    }
+
+    /**
+     * Move a target in the execution order by a relative amount.
+     *
+     * A positve number will make the target execute earlier. A negative number
+     * will make the target execute later in the order.
+     *
+     * @param {Target} executableTarget target to move
+     * @param {number} delta number of positions to move target by
+     * @returns {number} new position in execution order
+     */
+    moveExecutable (executableTarget, delta) {
+        const oldIndex = this.executableTargets.indexOf(executableTarget);
+        this.executableTargets.splice(oldIndex, 1);
+        let newIndex = oldIndex + delta;
+        if (newIndex > this.executableTargets.length) {
+            newIndex = this.executableTargets.length;
+        }
+        if (newIndex <= 0) {
+            if (this.executableTargets.length > 0 && this.executableTargets[0].isStage) {
+                newIndex = 1;
+            } else {
+                newIndex = 0;
+            }
+        }
+        this.executableTargets.splice(newIndex, 0, executableTarget);
+        return newIndex;
+    }
+
+    /**
+     * Set a target to execute at a specific position in the execution order.
+     *
+     * Infinity will set the target to execute first. 0 will set the target to
+     * execute last (before the stage).
+     *
+     * @param {Target} executableTarget target to move
+     * @param {number} newIndex position in execution order to place the target
+     * @returns {number} new position in the execution order
+     */
+    setExecutablePosition (executableTarget, newIndex) {
+        const oldIndex = this.executableTargets.indexOf(executableTarget);
+        return this.moveExecutable(executableTarget, newIndex - oldIndex);
+    }
+
+    /**
+     * Remove a target from the execution set.
+     * @param {Target} executableTarget target to remove
+     */
+    removeExecutable (executableTarget) {
+        const oldIndex = this.executableTargets.indexOf(executableTarget);
+        if (oldIndex > -1) {
+            this.executableTargets.splice(oldIndex, 1);
+        }
+    }
+
+    /**
+     * Dispose of a target.
+     * @param {!Target} disposingTarget Target to dispose of.
+     */
+    disposeTarget (disposingTarget) {
+        this.targets = this.targets.filter(target => {
+            if (disposingTarget !== target) return true;
+            // Allow target to do dispose actions.
+            target.dispose();
+            // Remove from list of targets.
+            return false;
+        });
+        if (this._stageTarget === disposingTarget) {
+            this._stageTarget = null;
+        }
+    }
+
+    /**
+     * Stop any threads acting on the target.
+     * @param {!Target} target Target to stop threads for.
+     * @param {Thread=} optThreadException Optional thread to skip.
+     */
+    stopForTarget (target, optThreadException) {
+        // Emit stop event to allow blocks to clean up any state.
+        this.emit(Runtime.STOP_FOR_TARGET, target, optThreadException);
+
+        // Stop any threads on the target.
+        for (let i = 0; i < this.threads.length; i++) {
+            if (this.threads[i] === optThreadException) {
+                continue;
+            }
+            if (this.threads[i].target === target) {
+                this._stopThread(this.threads[i]);
+            }
+        }
+    }
+
+    /**
+     * Reset the Run ID. Call this any time the project logically starts, stops, or changes identity.
+     */
+    resetRunId () {
+        if (!this.storage) {
+            // see also: attachStorage
+            return;
+        }
+
+        const newRunId = uuid.v1();
+        this.storage.scratchFetch.setMetadata(this.storage.scratchFetch.RequestMetadata.RunId, newRunId);
+    }
+
+    /**
+     * Start all threads that start with the green flag.
+     */
+    greenFlag () {
+        this.stopAll();
+        this.emit(Runtime.PROJECT_START);
+        this.updateCurrentMSecs();
+        this.ioDevices.clock.resetProjectTimer();
+        this.targets.forEach(target => target.clearEdgeActivatedValues());
+        // Inform all targets of the green flag.
+        for (let i = 0; i < this.targets.length; i++) {
+            this.targets[i].onGreenFlag();
+        }
+        this.startHats('event_whenflagclicked');
+    }
+
+    /**
+     * Stop "everything."
+     */
+    stopAll () {
+        // Emit stop event to allow blocks to clean up any state.
+        this.emit(Runtime.PROJECT_STOP_ALL);
+
+        // Dispose all clones.
+        const newTargets = [];
+        for (let i = 0; i < this.targets.length; i++) {
+            this.targets[i].onStopAll();
+            if (Object.prototype.hasOwnProperty.call(this.targets[i], 'isOriginal') &&
+                !this.targets[i].isOriginal) {
+                this.targets[i].dispose();
+            } else {
+                newTargets.push(this.targets[i]);
+            }
+        }
+        this.targets = newTargets;
+        // Dispose of the active thread.
         if (this.sequencer.activeThread !== null) {
             this._stopThread(this.sequencer.activeThread);
         }
@@ -1135,11 +1882,9 @@ class Runtime extends EventEmitter {
             this.threads.length + doneThreads.length -
                 this._getMonitorThreadCount([...this.threads, ...doneThreads]));
         // Store threads that completed this iteration for testing and other
-        // internal purposes.
-        this._lastStepDoneThreads = doneThreads;
-        if (this.renderer) {
-            // @todo: Only render when this.redrawRequested or clones rendered.
-        lity with Scratch 2,
+      
+     * Update a millisecond timestamp value that is saved on the Runtime.
+     * This value is helpful in certain instances for compatibility with Scratch 2,
      * which sometimes uses a `currentMSecs` timestamp value in Interpreter.as
      */
     updateCurrentMSecs () {
