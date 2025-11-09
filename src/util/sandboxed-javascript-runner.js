@@ -51,17 +51,19 @@ const createFrame = () => {
     return element;
 };
 
+const origin = window.origin;
+
 /**
  * vscode give me autofill
- * @param {MessageEvent} event
- * @param {HTMLIFrameElement} iframe
- * @param {Function} removeHandler
+ * @param {MessageEvent} event 
+ * @param {HTMLIFrameElement} iframe 
+ * @param {Function} removeHandler 
  * @returns nothing
  */
 const messageHandler = (event, iframe, removeHandler) => new Promise(resolve => {
     // console.log(event.origin) // remove later
     // this might not work first try cuz idk what event.origin is
-    // if (event.origin !== iframe.contentDocument.location.origin) return;
+    // if (event.origin !== iframe.contentDocument.location.origin) return; 
     // yea event origin is just location
     // console.log(event.origin, origin)
     // why is event.origin null
@@ -95,13 +97,13 @@ const messageHandler = (event, iframe, removeHandler) => new Promise(resolve => 
  * @param {string} code the code
  * @returns the code that can be placed into the eval in the iframe src
  */
-const prepareCodeForEval = code => {
+const prepareCodeForEval = (code) => {
     const escaped = JSON.stringify(code);
     // when the html encounters a closing script tag, itll end the script
     // so just put a backslash before it and it should be fine
-    const scriptEscaped = escaped.replaceAll('</script>', '<\\/script>');
+    const scriptEscaped = escaped.replaceAll('<\/script>', '<\\/script>');
     return scriptEscaped;
-};
+}
 
 const generateEvaluateSrc = (code, frame) => {
     // this puts some funny stuff in the iframe src
@@ -173,21 +175,21 @@ const generateEvaluateSrc = (code, frame) => {
         '</script>',
         '</body>',
         '</html>'
-    ].join('\n');
+    ].join("\n");
 
-    const blob = new Blob([html], {type: 'text/html;charset=UTF-8'});
+    const blob = new Blob([html], { type: 'text/html;charset=UTF-8' });
     const url = URL.createObjectURL(blob);
 
     return url;
 };
 
 class SandboxRunner {
-    static execute (code) {
+    static execute(code) {
         return new Promise(resolve => {
             const frame = createFrame();
             /**
              * please vscode show me the autofill
-             * @param {MessageEvent} e
+             * @param {MessageEvent} e 
              */
             const trueHandler = e => {
                 // this code is weird but we need to remove
