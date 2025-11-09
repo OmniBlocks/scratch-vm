@@ -36,11 +36,13 @@ test('extensionRuntimeOptions object properties', t => {
 
     // Test that we can add and read other properties
     runtime.extensionRuntimeOptions.testProperty = 'test value';
-    t.equal(runtime.extensionRuntimeOptions.testProperty, 'test value', 'Should be able to set and read custom properties');
+    t.equal(runtime.extensionRuntimeOptions.testProperty, 'test value',
+        'Should be able to set and read custom properties');
 
     // Test that the object behaves like a normal object
     t.type(Object.keys(runtime.extensionRuntimeOptions), 'object', 'Should be able to enumerate keys');
-    t.ok(runtime.extensionRuntimeOptions.hasOwnProperty('testProperty'), 'Should support hasOwnProperty');
+    t.ok(Object.prototype.hasOwnProperty.call(runtime.extensionRuntimeOptions, 'testProperty'),
+        'Should support hasOwnProperty');
 
     t.end();
 });

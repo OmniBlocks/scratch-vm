@@ -1882,11 +1882,9 @@ class Runtime extends EventEmitter {
             this.threads.length + doneThreads.length -
                 this._getMonitorThreadCount([...this.threads, ...doneThreads]));
         // Store threads that completed this iteration for testing and other
-        // internal purposes.
-        this._lastStepDoneThreads = doneThreads;
-        if (this.renderer) {
-            // @todo: Only render when this.redrawRequested or clones rendered.
-        lity with Scratch 2,
+      
+     * Update a millisecond timestamp value that is saved on the Runtime.
+     * This value is helpful in certain instances for compatibility with Scratch 2,
      * which sometimes uses a `currentMSecs` timestamp value in Interpreter.as
      */
     updateCurrentMSecs () {

@@ -11,21 +11,20 @@ const WARNED_EXTENSIONS = new Set();
 
 /**
  * Creates the actual proxy object.
- * @param {object.<string, any>} [default_content] Used by the deserializer to set the values of extensionStorage.
+ * @param {object.<string, any>} [defaultContent] Used by the deserializer to set the values of extensionStorage.
  */
-const ExtensionStorage = (default_content = {}) => {
-  return new Proxy(
-    default_content,
+const ExtensionStorage = (defaultContent = {}) => new Proxy(
+    defaultContent,
     {
-      set: function (target, key, value) {
-        if (!WARNED_EXTENSIONS.has(key)) {
-            console.warn("extensionStorage APIs are deprecated. Please avoid using them in your extensions.");
-            WARNED_EXTENSIONS.add(key);
+        set: function (target, key, value) {
+            if (!WARNED_EXTENSIONS.has(key)) {
+                console.warn('extensionStorage APIs are deprecated. Please avoid using them in your extensions.');
+                WARNED_EXTENSIONS.add(key);
+            }
+            target[key] = value;
+            return true;
         }
-        return target[key] = value;
-      },
     }
-  );
-};
+);
 
 module.exports = ExtensionStorage;
