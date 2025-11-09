@@ -8,7 +8,7 @@ const runtime = new Runtime();
 console.log('Testing extensionRuntimeOptions initialization...');
 
 // Check if the property exists
-if (runtime.extensionRuntimeOptions !== undefined) {
+if (typeof runtime.extensionRuntimeOptions !== 'undefined') {
     console.log('✓ extensionRuntimeOptions is initialized');
 } else {
     console.log('✗ extensionRuntimeOptions is undefined');

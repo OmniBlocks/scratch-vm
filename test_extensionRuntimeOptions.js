@@ -1,20 +1,21 @@
-// Simple test to verify extensionRuntimeOptions fix
+// Test script to verify the extensionRuntimeOptions fix
 const Runtime = require('./src/engine/runtime');
-
-console.log('Testing extensionRuntimeOptions initialization...');
 
 // Create a new runtime instance
 const runtime = new Runtime();
 
 // Test that extensionRuntimeOptions is initialized
-if (runtime.extensionRuntimeOptions !== undefined) {
+console.log('Testing extensionRuntimeOptions initialization...');
+
+// Check if the property exists
+if (typeof runtime.extensionRuntimeOptions !== 'undefined') {
     console.log('✓ extensionRuntimeOptions is initialized');
 } else {
     console.log('✗ extensionRuntimeOptions is undefined');
     process.exit(1);
 }
 
-// Test that it's an object
+// Check if it's an object
 if (typeof runtime.extensionRuntimeOptions === 'object') {
     console.log('✓ extensionRuntimeOptions is an object');
 } else {
