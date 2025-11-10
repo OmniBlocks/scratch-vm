@@ -194,11 +194,12 @@ class SPjavascriptV2 {
           blockShape: BlockShape.SQUARE,
           hideFromPalette: true,
           arguments: {
-            CODE: {
-              type: ArgumentType.CUSTOM, id: "SPjavascriptV2-codeEditor",
-              defaultValue: "needsInit-1@#4%^7*(0"
-            }
-          },
+              CODE: {
+                type: ArgumentType.CUSTOM,
+                custom: "SPjavascriptV2-codeEditor",  
+                defaultValue: ""                       
+              }
+            },
         },
         {
           opcode: "argumentReport",
