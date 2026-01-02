@@ -1917,6 +1917,45 @@ class VirtualMachine extends EventEmitter {
     configureScratchLinkSocketFactory (factory) {
         this.runtime.configureScratchLinkSocketFactory(factory);
     }
+
+    /**
+     * Take a snapshot of the current VM state for time-travel debugging.
+     * Captures complete runtime state including sprite positions, variables,
+     * running threads, timers, and IO device state.
+     * @return {object} Snapshot object containing all VM state.
+     */
+    takeSnapshot () {
+        const snapshot = require('./serialization/snapshot');
+        return snapshot.serialize(this.runtime);
+    }
+
+    /**
+     * Load a snapshot and restore the VM to that state.
+     * Stops all current execution and restores complete runtime state.
+     * @param {!object} snapshotData Snapshot object to restore.
+     * @return {Promise} Promise that resolves when snapshot is loaded.
+     */
+    loadSnapshot (snapshotData) {
+        if (!snapshotData) {
+            return Promise.reject(new Error('No snapshot data provided'));
+        }
+
+        // Stop all current execution
+        this.stopAll();
+
+        const snapshot = require('./serialization/snapshot');
+        
+        return snapshot.deserialize(this.runtime, snapshotData)
+            .then(({targets, extensions}) => {
+                // Emit event to notify that snapshot has been loaded
+                this.emit('SNAPSHOT_LOADED', snapshotData);
+                return {targets, extensions};
+            })
+            .catch(error => {
+                log.error('Failed to load snapshot:', error);
+                return Promise.reject(error);
+            });
+    }
 }
 
 module.exports = VirtualMachine;
