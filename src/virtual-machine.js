@@ -27,6 +27,7 @@ const {serializeSounds, serializeCostumes} = require('./serialization/serialize-
 require('canvas-toBlob');
 const {exportCostume} = require('./serialization/tw-costume-import-export');
 const Base64Util = require('./util/base64-util');
+const snapshotSerializer = require('./serialization/snapshot');
 
 const RESERVED_NAMES = ['_mouse_', '_stage_', '_edge_', '_myself_', '_random_'];
 
@@ -709,6 +710,56 @@ class VirtualMachine extends EventEmitter {
     toJSON (optTargetId, serializationOptions) {
         const sb3 = require('./serialization/sb3');
         return StringUtil.stringify(sb3.serialize(this.runtime, optTargetId, serializationOptions));
+    }
+
+    /**
+     * Take a VM snapshot which can later be restored with {@link loadSnapshot}.
+     *
+     * This is primarily intended for time-travel debugging.
+     *
+     * @param {object=} options
+     * @param {boolean=} options.includeProject Include a serialized SB3 project.json in the snapshot.
+     *     Defaults to true.
+     * @returns {object} Snapshot data.
+     */
+    takeSnapshot (options) {
+        const snapshot = snapshotSerializer.serialize(this, options);
+        this.emit('SNAPSHOT_TAKEN', snapshot);
+        return snapshot;
+    }
+
+    /**
+     * Normalize and validate snapshot data.
+     *
+     * @param {string|object|ArrayBuffer|ArrayBufferView} snapshotData Snapshot, or JSON string of a snapshot.
+     * @returns {object} Parsed snapshot object.
+     */
+    readSnapshot (snapshotData) {
+        if (typeof snapshotData === 'string') {
+            snapshotData = JSON.parse(snapshotData);
+        } else if (snapshotData instanceof ArrayBuffer || ArrayBuffer.isView(snapshotData)) {
+            snapshotData = JSON.parse(Buffer.from(snapshotData).toString());
+        }
+
+        snapshotSerializer.validateSnapshot(snapshotData);
+        return snapshotData;
+    }
+
+    /**
+     * Restore a snapshot created by {@link takeSnapshot}.
+     *
+     * @param {string|object|ArrayBuffer|ArrayBufferView} snapshotData Snapshot, or JSON string of a snapshot.
+     * @param {object=} options
+     * @param {boolean=} options.stopAll Stop all threads (and delete clones) before restoring. Defaults to true.
+     * @param {boolean=} options.restoreProject Reload the serialized project before restoring runtime state.
+     *     Defaults to false.
+     * @returns {Promise<void>} Resolves once restoration is complete.
+     */
+    loadSnapshot (snapshotData, options) {
+        const snapshot = this.readSnapshot(snapshotData);
+        return snapshotSerializer.restore(this, snapshot, options).then(() => {
+            this.emit('SNAPSHOT_LOADED', snapshot);
+        });
     }
 
     // TODO do we still need this function? Keeping it here so as not to introduce
